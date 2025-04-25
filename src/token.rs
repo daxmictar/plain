@@ -1,28 +1,34 @@
 /// Parser API
 
-#[derive(Debug)]
-pub struct Token {
-    pub token_type: TokenType,
-    pub literal: String,
-}
-
-impl Token {
-    pub fn new(token_type: TokenType, literal: String) -> Self {
-        Self {
-            token_type,
-            literal,
-        }
-    }
-}
+// #[derive(Debug)]
+// pub struct Token {
+//     pub token_type: TokenType,
+//     pub literal: String,
+// }
+//
+// impl Token {
+//     pub fn new(token_type: TokenType, literal: String) -> Self {
+//         Self {
+//             token_type,
+//             literal,
+//         }
+//     }
+// }
 
 #[derive(Debug, PartialEq)]
-pub enum TokenType {
+pub enum Token {
+    // a-z, A-Z
+    Character(char),
+
+    // 0-9
+    Number(String),
+
     // ()
     LeftParen,
     RightParen,
 
     // []
-    RightBracket, 
+    RightBracket,
     LeftBracket,
 
     // {}
@@ -54,12 +60,6 @@ pub enum TokenType {
     Plus,
     Slash,
 
-    // a-z
-    Character,
-
-    // 1-9
-    Number,
-
     // Keywords
     Define,
     Function,
@@ -72,29 +72,28 @@ pub enum TokenType {
     Return,
 
     // Special lexer types
-    Unknown,
-    Identifier,
-    Illegal,
+    Unknown(String),
+    Identifier(String),
+    Illegal(String),
+    Whitespace(String),
     EOF,
 }
 
-impl TokenType {
-    pub fn keyword(keyword_str: &str) -> TokenType {
+impl Token {
+    pub fn keyword(keyword_str: &str) -> Token {
         match keyword_str {
-            "func" => TokenType::Function,
-            "let" => TokenType::Let,
-            "true" => TokenType::True,
-            "false" => TokenType::False,
-            "if" => TokenType::If,
-            "else" => TokenType::Else,
-            "else if" => TokenType::ElseIf,
-            "return" => TokenType::Return,
-            _ => TokenType::Identifier,
+            "func" => Token::Function,
+            "let" => Token::Let,
+            "true" => Token::True,
+            "false" => Token::False,
+            "if" => Token::If,
+            "else" => Token::Else,
+            "else if" => Token::ElseIf,
+            "return" => Token::Return,
+            _ => Token::Identifier(keyword_str.to_string()),
         }
     }
 }
 
 #[cfg(test)]
-mod tests {
-
-}
+mod tests {}

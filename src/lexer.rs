@@ -1,4 +1,4 @@
-use crate::token::{TokenType, Token};
+use crate::token::Token;
 
 /// Parser
 pub struct Lexer {
@@ -19,7 +19,7 @@ impl Lexer {
             Some(Self {
                 input,
                 current: 0,
-                character
+                character,
             })
         } else {
             None
@@ -56,16 +56,11 @@ impl Lexer {
 
     /// Advances the current position of the parser object by one.
     /// If no valid token has been found, then set the character field to the null bit, '\0'.
-    pub fn advance(&mut self, verbose: bool) {
+    pub fn advance(&mut self) {
         let new_current = self.current + 1;
         if new_current > self.input.len() {
-            if verbose {
-                println!("Could not advance to {} from {}", self.current, new_current);
-            }
-
             return;
         }
-
 
         let new_char = match self.input.chars().nth(new_current) {
             Some(c) => c,
@@ -77,33 +72,39 @@ impl Lexer {
     }
 
     /// Traverses the source input until a non-whitespace character is found.
-    fn skip_whitespace(&mut self) {
+    fn skip_whitespace(&mut self) -> String {
+        let start = self.current;
         loop {
-            let c = self.current_char().expect("Expected a valid whitespace character.");
+            let c = self
+                .current_char()
+                .expect("Expected a valid whitespace character.");
             match c {
-                ' ' | '\t' | '\n' | '\r' => self.advance(false),
+                ' ' | '\t' | '\n' | '\r' => self.advance(),
                 _ => break,
             }
         }
-    } 
+        let end = self.current;
+
+        self.input[start..end].to_string()
+    }
 
     /// Converts the current character into a token if the underlying character is valid.
     /// This is the public interface to the `lex()` function.
     pub fn tokenize(&mut self) -> Option<Token> {
         if self.character == '\0' {
-            return None
+            return None;
         }
 
         Some(self.lex())
     }
 
-    /// Attempts to read consecutive ASCII characters until a whitespace is encountered. 
-    /// This lexer method is typically used to tokenize symbols or identifiers, 
+    /// Attempts to read consecutive ASCII characters until a whitespace is encountered.
+    /// This lexer method is typically used to tokenize symbols or identifiers,
     /// such as those in variables, function names, class names, trait names, etc.
     fn read_identifier(&mut self) -> String {
         let start = self.current;
         while self.character.is_ascii_alphabetic() {
-            self.advance(true);
+            self.advance();
         }
         let end = self.current;
 
@@ -115,10 +116,11 @@ impl Lexer {
     fn read_number(&mut self) -> String {
         let start = self.current;
         while self.character.is_ascii_digit() {
-            self.advance(true);
+            self.advance();
         }
         let end = self.current;
 
+        println!("{:?}", self.input[start..end].to_string());
         self.input[start..end].to_string()
     }
 
@@ -127,86 +129,89 @@ impl Lexer {
     fn lex(&mut self) -> Token {
         // Check if the current character is a whitespace character, and skip until a non-whitespace
         // character is reached.
-        self.skip_whitespace();
-
         let mut literal = self.character.to_string();
         let token_type = match self.character {
+            // Whitespace characters
+            ' ' | '\t' | '\n' => {
+                let skipped = self.skip_whitespace();
+                Token::Whitespace(skipped)
+            }
+
             // Alphabetical ASCII characters
             'a'..='z' | 'A'..='Z' => {
-                todo!()
-            },
+                // todo!("Implement `Character` tokenization");
+                let identifier = self.read_identifier();
+                Token::Identifier(identifier)
+            }
+
+            // Numerical characters
+            '0'..'9' => {
+                todo!("Implement `Number` tokenization");
+            }
 
             // Separators
-            '(' => TokenType::LeftParen,
-            ')' => TokenType::RightParen,
-            '{' => TokenType::LeftBrace,
-            '}' => TokenType::RightBrace,
-            '[' => TokenType::LeftBracket,
-            ']' => TokenType::RightBracket,
+            '(' => Token::LeftParen,
+            ')' => Token::RightParen,
+            '{' => Token::LeftBrace,
+            '}' => Token::RightBrace,
+            '[' => Token::LeftBracket,
+            ']' => Token::RightBracket,
 
             // Operators
-            '*' => TokenType::Asterisk,
-            '>' => TokenType::GreaterThan,
-            '<' => TokenType::LessThan,
-            '-' => TokenType::Minus,
-            '%' => TokenType::Percent,
-            '+' => TokenType::Plus,
-            '/' => TokenType::Slash,
+            '*' => Token::Asterisk,
+            '>' => Token::GreaterThan,
+            '<' => Token::LessThan,
+            '-' => Token::Minus,
+            '%' => Token::Percent,
+            '+' => Token::Plus,
+            '/' => Token::Slash,
 
             // Equality Operators
-            '=' =>  {
+            '=' => {
                 // If the next character is an equals '=', then the intended symbol
                 // should be an equality operation, '=='. Otherwise, it's just an
                 // assignment operation.
-                todo!("Implement `Equality` and `Assignment` tokenization")
-            },
-            '!' =>  {
+                todo!("Implement `Equality` and `Assignment` tokenization");
+            }
+            '!' => {
                 // If the next character is an equals '=', then the intended symbol
                 // should be an non-equality operation, '!='. Otherwise, it's just a
                 // normal bang symbol.
                 todo!("Implement `Negated-Equality (or NotEquals)` tokenization")
-            },
+            }
 
             // Unused Symbols
-            '&' => TokenType::Ampersand,
-            '@' => TokenType::Asperand,
-            '^' => TokenType::Carrot,
-            '$' => TokenType::Dollar,
-            '#' => TokenType::Pound,
-            '~' => TokenType::Tilde,
+            '&' => Token::Ampersand,
+            '@' => Token::Asperand,
+            '^' => Token::Carrot,
+            '$' => Token::Dollar,
+            '#' => Token::Pound,
+            '~' => Token::Tilde,
 
             // Other Characters
-            ';' => TokenType::Semicolon,
-            ',' => TokenType::Comma,
+            ';' => Token::Semicolon,
+            ',' => Token::Comma,
 
             // The "end-of-file" character.
-            '\0' => TokenType::EOF,
+            '\0' => Token::EOF,
 
             _ => {
-                if self.character.is_ascii_alphabetic() {
-                    literal = self.read_identifier();
-                    TokenType::keyword(&literal)
-                } else if self.character.is_ascii_digit() {
-                    literal = self.read_number(); 
-                    println!("{}", self.current);
-                    TokenType::Number
-                } else {
-                    TokenType::Illegal
-                }
+                println!("Encountered illegal TokenType: {}", self.character);
+                Token::Illegal(literal)
             }
         };
 
-        // Ensure that we advance our scanning index by one each time we determine the correct
-        // token type for the current lex.
-        self.advance(true);
-        Token::new(token_type, literal)
+        // advance a final time
+        self.advance();
+
+        token_type
     }
 }
 
 #[cfg(test)]
 mod tests {
     use crate::lexer;
-    use crate::token::{TokenType, Token};
+    use crate::token::Token;
 
     const TEST_INPUT: &str = "let five = 5;\
     let ten = 10;\
@@ -233,7 +238,7 @@ mod tests {
     #[test]
     fn test_advance() {
         let mut test_lexer = lexer::Lexer::new(TEST_INPUT.to_string()).unwrap();
-        test_lexer.advance(false);
+        test_lexer.advance();
 
         assert!(test_lexer.character == 'e');
         assert!(test_lexer.current == 1);
@@ -242,29 +247,24 @@ mod tests {
 
     #[test]
     fn test_lexing_of_symbols() {
-        const TEST_INPUT: &str = "~-/*5&@^$#";
-
-        let mut test_lexer = lexer::Lexer::new(TEST_INPUT.to_string()).unwrap();
-
+        const TEST_INPUT: &str = "~-/*&@^$#";
         let expected_tokens = vec![
-            Token{token_type:TokenType::Tilde, literal:"~".to_string()},
-            Token{token_type:TokenType::Minus, literal:"-".to_string()},
-            Token{token_type:TokenType::Slash, literal:"/".to_string()},
-            Token{token_type:TokenType::Asterisk, literal:"*".to_string()},
-            Token{token_type:TokenType::Number, literal:"5".to_string()},
-            Token{token_type:TokenType::Ampersand, literal:"&".to_string()},
-            Token{token_type:TokenType::Asperand, literal:"@".to_string()},
-            Token{token_type:TokenType::Carrot, literal:"^".to_string()},
-            Token{token_type:TokenType::Dollar, literal:"$".to_string()},
-            Token{token_type:TokenType::Pound, literal:"#".to_string()},
+            Token::Tilde,
+            Token::Minus,
+            Token::Slash,
+            Token::Asterisk,
+            Token::Ampersand,
+            Token::Asperand,
+            Token::Carrot,
+            Token::Dollar,
+            Token::Pound,
         ];
 
+        let mut test_lexer = lexer::Lexer::new(TEST_INPUT.to_string()).unwrap();
         for expected in expected_tokens {
             let actual = test_lexer.tokenize().unwrap();
-            dbg!(&actual.literal, &expected.literal);
-            dbg!(&actual.token_type, &expected.token_type); 
-            assert!(&actual.literal == &expected.literal);
-            assert!(&actual.token_type == &expected.token_type);
+            println!("ACTUAL=`{:?}`, EXPECTED=`{:?}`", &actual, &expected);
+            assert!(actual == expected);
         }
     }
 
@@ -276,25 +276,23 @@ mod tests {
 
         let expected_tokens = vec![
             // Line 1
-            Token{token_type: TokenType::Let, literal: "let".to_string()},
-            Token{token_type: TokenType::Identifier, literal: "five".to_string()},
-            Token{token_type: TokenType::Assignment, literal: "=".to_string()},
-            Token{token_type: TokenType::Number, literal: "5".to_string()},
-            Token{token_type: TokenType::Semicolon, literal: ";".to_string()},
+            Token::Let,
+            Token::Identifier("five".to_string()),
+            Token::Assignment,
+            Token::Number("5".to_string()),
+            Token::Semicolon,
             // Line 2
-            Token{token_type: TokenType::Let, literal: "let".to_string()},
-            Token{token_type: TokenType::Identifier, literal: "ten".to_string()},
-            Token{token_type: TokenType::Assignment, literal: "=".to_string()},
-            Token{token_type: TokenType::Number, literal: "10".to_string()},
-            Token{token_type: TokenType::Semicolon, literal: ";".to_string()},
+            Token::Let,
+            Token::Identifier("ten".to_string()),
+            Token::Assignment,
+            Token::Number("10".to_string()),
+            Token::Semicolon,
         ];
 
         for expected in expected_tokens {
-            let actual = test_lexer.tokenize().expect("Expected a token literal");
-            dbg!(&actual.literal, &expected.literal, &actual.token_type, &expected.token_type, "");
-            // dbg!(&actual.token_type, &expected.token_type); 
-            assert!(actual.literal == expected.literal);
-            assert!(actual.token_type == expected.token_type);
+            let actual = test_lexer.tokenize().unwrap();
+            println!("ACTUAL=`{:?}`, EXPECTED=`{:?}`", &actual, &expected);
+            assert!(actual == expected);
         }
     }
 
@@ -303,32 +301,31 @@ mod tests {
         const TEST_INPUT: &str = "let add = func(x, y) {\
           return x + y;\
         }";
+
         let mut test_lexer = lexer::Lexer::new(TEST_INPUT.to_string()).unwrap();
         let expected_tokens = vec![
-            Token{token_type: TokenType::Let, literal: "let".to_string()},
-            Token{token_type: TokenType::Identifier, literal: "add".to_string()},
-            Token{token_type: TokenType::Assignment, literal: "=".to_string()},
-            Token{token_type: TokenType::Function, literal: "func".to_string()},
-            Token{token_type: TokenType::LeftParen, literal: "(".to_string()},
-            Token{token_type: TokenType::Identifier, literal: "x".to_string()},
-            Token{token_type: TokenType::Comma, literal: ",".to_string()},
-            Token{token_type: TokenType::Identifier, literal: "y".to_string()},
-            Token{token_type: TokenType::RightParen, literal: ")".to_string()},
-            Token{token_type: TokenType::LeftBrace, literal: "{".to_string()},
-            Token{token_type: TokenType::Return, literal: "return".to_string()},
-            Token{token_type: TokenType::Identifier, literal: "x".to_string()},
-            Token{token_type: TokenType::Plus, literal: "+".to_string()},
-            Token{token_type: TokenType::Identifier, literal: "y".to_string()},
-            Token{token_type: TokenType::Semicolon, literal: ";".to_string()},
-            Token{token_type: TokenType::RightBrace, literal: "}".to_string()},
+            Token::keyword("let"),
+            Token::Identifier("add".to_string()),
+            Token::Assignment,
+            Token::Function,
+            Token::LeftParen,
+            Token::Identifier("x".to_string()),
+            Token::Comma,
+            Token::Identifier("y".to_string()),
+            Token::RightParen,
+            Token::LeftBrace,
+            Token::keyword("return"),
+            Token::Identifier("x".to_string()),
+            Token::Plus,
+            Token::Identifier("y".to_string()),
+            Token::Semicolon,
+            Token::RightBrace,
         ];
 
         for expected in expected_tokens {
             let actual = test_lexer.tokenize().unwrap();
-            dbg!(&actual.literal, &expected.literal);
-            dbg!(&actual.token_type, &expected.token_type); 
-            assert!(actual.literal == expected.literal);
-            assert!(actual.token_type == expected.token_type);
+            println!("ACTUAL=`{:?}`, EXPECTED=`{:?}`", &actual, &expected);
+            assert!(actual == expected);
         }
     }
 
@@ -340,23 +337,21 @@ mod tests {
         let mut test_lexer = lexer::Lexer::new(INPUT.to_string()).unwrap();
         let expected_tokens = vec![
             // Line 1
-            Token{token_type: TokenType::Number, literal: "10".to_string()},
-            Token{token_type: TokenType::Equals, literal: "==".to_string()},
-            Token{token_type: TokenType::Number, literal: "10".to_string()},
-            Token{token_type: TokenType::Semicolon, literal: ";".to_string()},
+            Token::Number("10".to_string()),
+            Token::Equals,
+            Token::Number("10".to_string()),
+            Token::Semicolon,
             // Line 2
-            Token{token_type: TokenType::Number, literal: "10".to_string()},
-            Token{token_type: TokenType::NotEquals, literal: "!=".to_string()},
-            Token{token_type: TokenType::Number, literal: "9".to_string()},
-            Token{token_type: TokenType::Semicolon, literal: ";".to_string()},
+            Token::Number("10".to_string()),
+            Token::NotEquals,
+            Token::Number("9".to_string()),
+            Token::Semicolon,
         ];
 
         for expected in expected_tokens {
             let actual = test_lexer.tokenize().unwrap();
-            dbg!(&actual.literal, &expected.literal);
-            dbg!(&actual.token_type, &expected.token_type);
-            assert!(actual.literal == expected.literal);
-            assert!(actual.token_type == expected.token_type);
+            println!("ACTUAL=`{:?}`, EXPECTED=`{:?}`", &actual, &expected);
+            assert!(actual == expected);
         }
     }
 }
