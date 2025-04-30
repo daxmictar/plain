@@ -1,6 +1,6 @@
 #[allow(dead_code)]
 #[derive(Debug, PartialEq)]
-pub enum Token<'TokenString> {
+pub enum Token<'token_string> {
     // a-z, A-Z
     Character(char),
 
@@ -58,7 +58,7 @@ pub enum Token<'TokenString> {
 
     // Special lexer types
     Unknown(char),
-    Identifier(&'TokenString str),
+    Identifier(&'token_string str),
     Illegal(char),
     Whitespace(char),
 
@@ -66,7 +66,8 @@ pub enum Token<'TokenString> {
     EOF,
 }
 
-impl Token {
+#[allow(dead_code)]
+impl<'token_str> Token<'token_str> {
     pub fn check_if_keyword(keyword_str: &str) -> Token {
         println!("{:?}", keyword_str);
         match keyword_str.trim() {
@@ -78,7 +79,7 @@ impl Token {
             "else" => Token::Else,
             "else if" => Token::ElseIf,
             "return" => Token::Return,
-            _ => Token::Identifier(keyword_str)
+            _ => Token::Identifier(keyword_str),
         }
     }
 }

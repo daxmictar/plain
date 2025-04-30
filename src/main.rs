@@ -15,7 +15,7 @@ fn main() -> () {
         2 => {
             if let Some(file_name) = args.nth(1) {
                 let contents = fs::read_to_string(file_name).unwrap();
-                let lexer = lexer::Lexer::new(contents);
+                let lexer = lexer::Lexer::new(contents.to_string().as_str());
             };
         }
         3.. => {}
