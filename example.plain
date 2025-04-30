@@ -1,0 +1,30 @@
+#strict // <-- requires type annotations
+
+use OS/Arguments;
+
+# procedures do not take arguments and can be annotated with '@entry' 
+# there can only be one entry point in a single interpretation unit. 
+@entry
+procedure main {
+    printInputArguments()
+}
+
+function printInputArguments() {
+    args := Arguments.getArguments();
+
+    for arg in args {
+        # the default print function which accepts a string
+        print(f"{arg}")
+
+        # or use an alternative library function to print with a line appended
+        printLine(f"{arg}")
+
+        # a raw format string
+        print(rf"{arg}")
+
+        # the order of the string prefix doesn't matter. 
+        print(fr"{arg}")
+    }    
+}
+
+

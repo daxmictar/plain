@@ -1,27 +1,11 @@
-/// Parser API
-
-// #[derive(Debug)]
-// pub struct Token {
-//     pub token_type: TokenType,
-//     pub literal: String,
-// }
-//
-// impl Token {
-//     pub fn new(token_type: TokenType, literal: String) -> Self {
-//         Self {
-//             token_type,
-//             literal,
-//         }
-//     }
-// }
-
+#[allow(dead_code)]
 #[derive(Debug, PartialEq)]
-pub enum Token {
+pub enum Token<'TokenString> {
     // a-z, A-Z
     Character(char),
 
     // 0-9
-    Number(String),
+    Number(char),
 
     // ()
     LeftParen,
@@ -46,6 +30,7 @@ pub enum Token {
     Dollar,
     Pound,
     Tilde,
+    Underscore,
 
     // Operators
     Assignment,
@@ -72,16 +57,19 @@ pub enum Token {
     Return,
 
     // Special lexer types
-    Unknown(String),
-    Identifier(String),
-    Illegal(String),
-    Whitespace(String),
+    Unknown(char),
+    Identifier(&'TokenString str),
+    Illegal(char),
+    Whitespace(char),
+
+    // The 'extra-special' end-of-file character.
     EOF,
 }
 
 impl Token {
-    pub fn keyword(keyword_str: &str) -> Token {
-        match keyword_str {
+    pub fn check_if_keyword(keyword_str: &str) -> Token {
+        println!("{:?}", keyword_str);
+        match keyword_str.trim() {
             "func" => Token::Function,
             "let" => Token::Let,
             "true" => Token::True,
@@ -90,7 +78,7 @@ impl Token {
             "else" => Token::Else,
             "else if" => Token::ElseIf,
             "return" => Token::Return,
-            _ => Token::Identifier(keyword_str.to_string()),
+            _ => Token::Identifier(keyword_str)
         }
     }
 }
