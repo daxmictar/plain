@@ -34,6 +34,11 @@ impl Lexer {
         self.input.chars().nth(self.position)
     }
 
+    /// Returns the next character of the calling `Lexer`.
+    pub fn next_char(&self) -> Option<char> {
+        self.input.chars().nth(self.position + 1)
+    }
+
     /// Returns the next read position of the calling `Lexer`.
     pub fn next(&self) -> Option<usize> {
         Some(self.position())
@@ -48,51 +53,44 @@ impl Lexer {
         false
     }
 
-    /// Returns the next character of the calling `Lexer`.
-    pub fn next_char(&self) -> Option<char> {
-        self.input.chars().nth(self.position + 1)
-    }
-
     /// Advances the current position of the parser object by one.
     /// If no valid token has been found, then set the character field to the null bit, '\0'.
-    pub fn advance(&mut self) {
-        let new_current = self.position + 1;
-        if new_current > self.input.len() {
+    fn advance(&mut self) {
+        let new_position = self.position + 1;
+        if new_position > self.input.len() {
             return;
         }
 
-        let new_char = match self.input.chars().nth(new_current) {
-            Some(c) => c,
-            None => '\0',
-        };
-
-        self.position = new_current;
+        self.position = new_position;
     }
 
-    /// Traverses the source input until a non-whitespace character is found.
-    fn skip_whitespace(&mut self) -> String {
-        let start = self.position;
-        loop {
-            let c = self.char().expect("Expected a valid whitespace character.");
-            match c {
-                ' ' | '\t' | '\n' | '\r' => self.advance(),
-                _ => break,
+    fn discriminate_character<F>(&mut self, predicate: F) -> (usize, usize, String)
+    where
+        F: Fn(char) -> bool,
+    {
+        let start = self.position();
+        while let Some(c) = self.char() {
+            if !predicate(c) {
+                break;
             }
+
+            self.advance();
         }
-        let end = self.position;
+        let end = self.position();
 
-        self.input[start..end].to_string()
-    }
-
-    /// Converts the current character into a token if the underlying character is valid.
-    /// This is the public interface to the `lex()` function.
-    pub fn tokenize(&mut self) -> Option<Token> {
-        Some(self.lex())
+        return (start, end, self.input[start..end].to_string());
     }
 
     /// The main lexing method of the `Lexer` object. It will translate the current character into
     /// a `TokenType` variant.
     fn lex(&mut self) -> Token {
+        // skip any whitespace characters
+        let skipped = self.discriminate_character(|c| c.is_ascii_whitespace());
+        println!(
+            "Detected whitespace characters from {} to {}",
+            skipped.0, skipped.1
+        );
+
         // Check if the current character is a whitespace character, and skip until a non-whitespace
         // character is reached.
         let current_char = match self.input.chars().nth(self.position) {
@@ -101,14 +99,10 @@ impl Lexer {
         };
 
         let token_type = match current_char {
-            // Whitespace characters
-            ' ' | '\t' | '\n' => {
-                todo!("Implement `Whitespace` tokenization");
-            }
-
             // Alphabetical ASCII characters
             'a'..='z' | 'A'..='Z' => {
-                todo!("Implement `Character` tokenization");
+                let results = self.discriminate_character(|c| c.is_ascii_alphabetic());
+                Token::check_if_keyword(results.2.to_string())
             }
 
             // Numerical characters
@@ -172,6 +166,12 @@ impl Lexer {
 
         token_type
     }
+
+    /// Converts the current character into a token if the underlying character is valid.
+    /// This is the public interface to the `lex()` function.
+    pub fn tokenize(&mut self) -> Token {
+        self.lex()
+    }
 }
 
 #[cfg(test)]
@@ -218,7 +218,7 @@ mod tests {
         ];
 
         for expected in expected_tokens {
-            let actual = test_lexer.tokenize().unwrap();
+            let actual = test_lexer.tokenize();
             dbg!(&actual, &expected);
             assert!(actual == expected);
         }
@@ -233,7 +233,23 @@ mod tests {
         let expected_tokens = vec![Token::Comma, Token::Semicolon];
 
         for expected in expected_tokens {
-            let actual = test_lexer.tokenize().unwrap();
+            let actual = test_lexer.tokenize();
+            dbg!(&actual, &expected);
+            assert!(actual == expected);
+        }
+    }
+
+    #[test]
+    fn test_lexing_of_keyword() {
+        const TEST_INPUT: &str = "let add";
+
+        // and then pass the contents to the lexer
+        let mut test_lexer = Lexer::new(TEST_INPUT).unwrap();
+
+        let expected_tokens = vec![Token::Let, Token::Identifier("add".to_string())];
+
+        for expected in expected_tokens {
+            let actual = test_lexer.tokenize();
             dbg!(&actual, &expected);
             assert!(actual == expected);
         }
