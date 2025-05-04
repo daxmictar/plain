@@ -5,7 +5,7 @@ pub enum Token {
     Character(char),
 
     // 0-9
-    Number(char),
+    Number(String),
 
     // ()
     LeftParen,

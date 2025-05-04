@@ -107,7 +107,8 @@ impl Lexer {
 
             // Numerical characters
             '0'..'9' => {
-                todo!("Implement `Number` tokenization");
+                let result = self.discriminate_character(|c| c.is_ascii_alphanumeric());
+                Token::Number(result.2)
             }
 
             // Equality Operators
@@ -247,6 +248,25 @@ mod tests {
         let mut test_lexer = Lexer::new(TEST_INPUT).unwrap();
 
         let expected_tokens = vec![Token::Let, Token::Identifier("add".to_string())];
+
+        for expected in expected_tokens {
+            let actual = test_lexer.tokenize();
+            dbg!(&actual, &expected);
+            assert!(actual == expected);
+        }
+    }
+
+    #[test]
+    fn test_lexing_of_a_number() {
+        const TEST_INPUT: &str = "123456 654321";
+
+        // and then pass the contents to the lexer
+        let mut test_lexer = Lexer::new(TEST_INPUT).unwrap();
+
+        let expected_tokens = vec![
+            Token::Number("123456".to_string()),
+            Token::Number("654321".to_string()),
+        ];
 
         for expected in expected_tokens {
             let actual = test_lexer.tokenize();
