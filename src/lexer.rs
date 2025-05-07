@@ -116,7 +116,18 @@ impl Lexer {
                 // If the next character is an equals '=', then the intended symbol
                 // should be an equality operation, '=='. Otherwise, it's just an
                 // assignment operation.
-                todo!("Implement `Equality` and `Assignment` tokenization")
+                let next_char = match self.next_char() {
+                    Some(c) => c,
+                    None => return Token::Illegal(self.char().expect("expected an illegal character")),
+                };
+
+                if next_char == '=' {
+                    // TODO: Fix manually adjusting position by 2
+                    self.position += 2;
+                    return Token::Equals
+                }
+
+                Token::Assignment
             }
 
             '!' => {
@@ -266,6 +277,47 @@ mod tests {
         let expected_tokens = vec![
             Token::Number("123456".to_string()),
             Token::Number("654321".to_string()),
+        ];
+
+        for expected in expected_tokens {
+            let actual = test_lexer.tokenize();
+            dbg!(&actual, &expected);
+            assert!(actual == expected);
+        }
+    }
+
+    #[test]
+    fn test_lexing_of_assignment() {
+        const TEST_INPUT: &str = "let a = 5";
+
+        // and then pass the contents to the lexer
+        let mut test_lexer = Lexer::new(TEST_INPUT).unwrap();
+
+        let expected_tokens = vec![
+            Token::Let,
+            Token::Identifier("a".to_string()),
+            Token::Assignment,
+            Token::Number("5".to_string())
+        ];
+
+        for expected in expected_tokens {
+            let actual = test_lexer.tokenize();
+            dbg!(&actual, &expected);
+            assert!(actual == expected);
+        }
+    }
+
+    #[test]
+    fn test_lexing_of_equality() {
+        const TEST_INPUT: &str = "a == 5";
+
+        // and then pass the contents to the lexer
+        let mut test_lexer = Lexer::new(TEST_INPUT).unwrap();
+
+        let expected_tokens = vec![
+            Token::Identifier("a".to_string()),
+            Token::Equals,
+            Token::Number("5".to_string())
         ];
 
         for expected in expected_tokens {
